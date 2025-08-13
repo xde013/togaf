@@ -430,6 +430,9 @@
             #settings-container {
                 justify-content: space-between;
             }
+            #shortcuts-icon {
+                display: none;
+            }
         }
 
     </style>
@@ -568,7 +571,9 @@
             submitBtn.style.display = 'block';
             updateScore();
             loadQuestion();
-            modalOverlay.classList.add('visible');
+            if (window.innerWidth > 600) {
+                modalOverlay.classList.add('visible');
+            }
         }
 
         function loadQuestion() {
