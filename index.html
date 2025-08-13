@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TOGAF Foundation Exam Simulator</title>
+    <title>TOGAF Exam Simulator</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
@@ -19,7 +19,68 @@
             padding: 20px;
         }
 
+        #level-selector-container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        #level-selector-container h2 {
+            margin-top: 0;
+            margin-bottom: 30px;
+            font-size: 1.8em;
+            color: #333;
+        }
+
+        #level-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .level-btn {
+            flex: 1;
+            min-width: 250px;
+            max-width: 300px;
+            padding: 25px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .level-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .level-btn h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.5em;
+            font-weight: 500;
+        }
+
+        .level-btn p {
+            margin: 0;
+            font-size: 1em;
+            opacity: 0.9;
+        }
+
         #quiz-container {
+            display: none; /* Initially hidden */
             background-color: #ffffff;
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -39,6 +100,21 @@
         #header h1 {
             margin: 0;
             font-size: 1.5em;
+        }
+
+        #back-btn {
+            position: absolute;
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            font-size: 1.5em;
+            cursor: pointer;
+            color: white;
+            transition: opacity 0.2s;
+        }
+
+        #back-btn:hover {
+            opacity: 0.8;
         }
 
         #shortcuts-icon {
@@ -237,6 +313,7 @@
         }
 
         .love-footer {
+            display: none; /* Initially hidden */
             margin-top: 20px;
             text-align: center;
             color: #777;
@@ -253,6 +330,7 @@
         }
 
         .disclaimer-footer {
+            display: none; /* Initially hidden */
             margin-top: 20px;
             font-size: 0.8em;
             color: #888;
@@ -439,9 +517,24 @@
 </head>
 <body>
 
+    <div id="level-selector-container">
+        <h2>Choose Your Exam Level</h2>
+        <div id="level-buttons">
+            <button id="foundation-btn" class="level-btn">
+                <h3>Foundation</h3>
+                <p>40 Questions</p>
+            </button>
+            <button id="practitioner-btn" class="level-btn">
+                <h3>Practitioner</h3>
+                <p>8 Scenario-Based Questions</p>
+            </button>
+        </div>
+    </div>
+
     <div id="quiz-container">
         <div id="header">
-            <h1>TOGAF® Foundation Exam Simulator</h1>
+            <i id="back-btn" class="fas fa-arrow-left"></i>
+            <h1 id="quiz-title">TOGAF® Exam Simulator</h1>
             <i id="shortcuts-icon" class="fas fa-keyboard"></i>
         </div>
 
@@ -517,14 +610,14 @@
     <script>
         const quizContainer = document.getElementById('quiz-container');
         const quizBody = document.getElementById('quiz-body');
-        const questionText = document.getElementById('question-text');
-        const optionsContainer = document.getElementById('options-container');
-        const explanationContainer = document.getElementById('explanation-container');
-        const explanationText = document.getElementById('explanation-text');
+        let questionText = document.getElementById('question-text');
+        let optionsContainer = document.getElementById('options-container');
+        let explanationContainer = document.getElementById('explanation-container');
+        let explanationText = document.getElementById('explanation-text');
         const submitBtn = document.getElementById('submit-btn');
         const nextBtn = document.getElementById('next-btn');
-        const progressText = document.getElementById('progress-text');
-        const scoreText = document.getElementById('score-text');
+        let progressText = document.getElementById('progress-text');
+        let scoreText = document.getElementById('score-text');
         const finalScoreContainer = document.getElementById('final-score-container');
         const finalScoreP = document.getElementById('final-score-p');
         const restartBtn = document.getElementById('restart-btn');
@@ -533,6 +626,11 @@
         const closeModal = document.getElementById('close-modal');
         const autoSubmitToggle = document.getElementById('auto-submit-toggle');
         const explanationToggle = document.getElementById('explanation-toggle');
+        const levelSelectorContainer = document.getElementById('level-selector-container');
+        const foundationBtn = document.getElementById('foundation-btn');
+        const practitionerBtn = document.getElementById('practitioner-btn');
+        const quizTitle = document.getElementById('quiz-title');
+        const backBtn = document.getElementById('back-btn');
 
         let allQuestions = [];
         let currentQuestionIndex = 0;
@@ -543,27 +641,38 @@
         let showExplanation = true;
         let questionSubmitted = false;
 
-        async function fetchQuestions() {
+        async function fetchQuestions(questionFile) {
             try {
-                const response = await fetch('questions.json');
+                const response = await fetch(questionFile);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 allQuestions = await response.json();
-                startQuiz();
+                return true;
             } catch (error) {
                 console.error("Could not fetch questions:", error);
-                questionText.innerText = "Failed to load quiz questions. Please check the console for errors and refresh the page.";
+                quizContainer.style.display = 'block';
+                quizBody.innerHTML = `<p style="color: red; text-align: center;">Failed to load quiz questions. Please check the console for errors and refresh the page.</p>`;
+                document.getElementById('footer').style.display = 'none';
+                return false;
             }
         }
 
-        function startQuiz() {
-            // Shuffle all questions and pick the first 40
+        function startQuiz(questionCount, title) {
+            quizTitle.innerText = title;
+            // Shuffle all questions and pick the right number
             const shuffled = allQuestions.sort(() => 0.5 - Math.random());
-            quizData = shuffled.slice(0, 40);
+            quizData = shuffled.slice(0, questionCount);
             
             currentQuestionIndex = 0;
             score = 0;
+            
+            // Show quiz, hide selector
+            levelSelectorContainer.style.display = 'none';
+            quizContainer.style.display = 'block';
+            document.querySelector('.love-footer').style.display = 'block';
+            document.querySelector('.disclaimer-footer').style.display = 'block';
+
             finalScoreContainer.style.display = 'none';
             quizBody.style.display = 'block';
             document.getElementById('footer').style.display = 'block';
@@ -571,9 +680,6 @@
             submitBtn.style.display = 'block';
             updateScore();
             loadQuestion();
-            if (window.innerWidth > 600) {
-                modalOverlay.classList.add('visible');
-            }
         }
 
         function loadQuestion() {
@@ -707,7 +813,9 @@
             const finalMessageP = document.getElementById('final-message-p');
             finalMessageP.classList.remove('pass', 'fail'); // Clear previous classes
 
-            if (percentage >= 60) {
+            const passMark = 60; 
+
+            if (percentage >= passMark) {
                 finalMessageP.innerText = 'Congratulations! You passed.';
                 finalMessageP.classList.add('pass');
             } else {
@@ -723,33 +831,105 @@
             scoreText.innerText = `Score: ${score}`;
         }
 
+        async function initQuiz(level) {
+            let questionFile, questionCount, title;
+            if (level === 'foundation') {
+                questionFile = 'questions.json';
+                questionCount = 40;
+                title = 'TOGAF® Foundation Exam Simulator';
+            } else {
+                questionFile = 'questions-level2.json';
+                questionCount = 8;
+                title = 'TOGAF® Practitioner Exam Simulator';
+            }
+
+            const success = await fetchQuestions(questionFile);
+            if (success) {
+                startQuiz(questionCount, title);
+            }
+        }
+        
+        function showLevelSelector() {
+            levelSelectorContainer.style.display = 'block';
+            quizContainer.style.display = 'none';
+            document.querySelector('.love-footer').style.display = 'none';
+            document.querySelector('.disclaimer-footer').style.display = 'none';
+
+            // Reset quiz body in case of fetch error
+            const originalQuizBody = `
+            <div id="settings-container">
+                <div class="setting-toggle">
+                    <label for="auto-submit-toggle">Auto-Submit</label>
+                    <label class="switch">
+                        <input type="checkbox" id="auto-submit-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="setting-toggle">
+                    <label for="explanation-toggle">Show Explanation</label>
+                    <label class="switch">
+                        <input type="checkbox" id="explanation-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+            <div id="progress-container">
+                <span id="progress-text"></span>
+                <span id="score-text">Score: 0</span>
+            </div>
+            
+            <div id="question-container">
+                <p id="question-text"></p>
+                <div id="options-container"></div>
+            </div>
+
+            <div id="explanation-container">
+                <p id="explanation-title">Explanation</p>
+                <p id="explanation-text"></p>
+            </div>
+            `;
+            quizBody.innerHTML = originalQuizBody;
+
+            // Re-assign element variables after innerHTML is overwritten
+            progressText = document.getElementById('progress-text');
+            scoreText = document.getElementById('score-text');
+            questionText = document.getElementById('question-text');
+            optionsContainer = document.getElementById('options-container');
+            explanationContainer = document.getElementById('explanation-container');
+            explanationText = document.getElementById('explanation-text');
+        }
+
         submitBtn.addEventListener('click', handleSubmit);
         nextBtn.addEventListener('click', handleNext);
-        restartBtn.addEventListener('click', startQuiz);
+        restartBtn.addEventListener('click', showLevelSelector);
+        backBtn.addEventListener('click', showLevelSelector);
 
-        autoSubmitToggle.addEventListener('change', (e) => {
-            isAutoSubmit = e.target.checked;
-            if (isAutoSubmit) {
-                submitBtn.style.display = 'none';
-                if (selectedOption) {
-                    handleSubmit();
+        foundationBtn.addEventListener('click', () => initQuiz('foundation'));
+        practitionerBtn.addEventListener('click', () => initQuiz('practitioner'));
+
+        quizBody.addEventListener('change', (e) => {
+            if (e.target.id === 'auto-submit-toggle') {
+                isAutoSubmit = e.target.checked;
+                if (isAutoSubmit) {
+                    submitBtn.style.display = 'none';
+                    if (selectedOption) {
+                        handleSubmit();
+                    }
+                } else {
+                    if (nextBtn.style.display !== 'block') {
+                        submitBtn.style.display = 'block';
+                        submitBtn.disabled = !selectedOption;
+                    }
                 }
-            } else {
-                if (nextBtn.style.display !== 'block') {
-                    submitBtn.style.display = 'block';
-                    submitBtn.disabled = !selectedOption;
+            } else if (e.target.id === 'explanation-toggle') {
+                showExplanation = e.target.checked;
+                const anAnswerIsSubmitted = submitBtn.style.display === 'none' && quizBody.style.display === 'block';
+
+                if (showExplanation && anAnswerIsSubmitted) {
+                    explanationContainer.classList.add('visible');
+                } else {
+                    explanationContainer.classList.remove('visible');
                 }
-            }
-        });
-
-        explanationToggle.addEventListener('change', (e) => {
-            showExplanation = e.target.checked;
-            const anAnswerIsSubmitted = submitBtn.style.display === 'none' && quizBody.style.display === 'block';
-
-            if (showExplanation && anAnswerIsSubmitted) {
-                explanationContainer.classList.add('visible');
-            } else {
-                explanationContainer.classList.remove('visible');
             }
         });
 
@@ -782,8 +962,8 @@
             }
         });
 
-        // Start the quiz on page load
-        fetchQuestions();
+        // Start the quiz on page load -- REMOVED
+        // fetchQuestions();
 
     </script>
 </body>
